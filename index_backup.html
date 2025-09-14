@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess Master - Color Puzzle Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .hud {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+        }
+
+        .hud-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .hud-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+
+        .hud-value.updated {
+            animation: hudUpdate 0.5s ease-in-out;
+        }
+
+        .round-number {
+            font-size: 1.5em;
+            color: #667eea;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .round-number.new-round {
+            animation: newRoundBounce 0.8s ease-out;
+        }
+
+        .score-display {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .gem-display {
+            color: #9b59b6;
+            font-weight: bold;
+        }
+
+        .next-round-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            animation: nextRoundPulse 1s infinite;
+        }
+
+        .slots-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .slot {
+            width: 80px;
+            height: 80px;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #f9f9f9;
+        }
+
+        .slot:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .slot.selected {
+            border-color: #667eea;
+            border-width: 4px;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+            animation: selectedPulse 1.5s infinite;
+        }
+
+        .slot.solved {
+            border-color: #28a745;
+            cursor: default;
+            transform: scale(1.1);
+            animation: solvedFadeIn 0.8s ease-out;
+        }
+
+        .slot.solved:hover {
+            transform: scale(1.1);
+        }
+
+        .slot.shake {
+            animation: shakeSlot 0.5s ease-in-out;
+        }
+
+        .slot.round-start {
+            animation: roundStartGlow 1s ease-in-out;
+        }
+
+        .slot.round-solved {
+            animation: roundSolvedPulse 1.5s ease-in-out;
+        }
+
+        .slot-number {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .color-palette {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .color-chip {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .color-chip:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .color-chip:active,
+        .color-chip.clicked {
+            animation: chipClick 0.2s ease-in-out;
+        }
+
+        .color-chip.red { background-color: #e74c3c; }
+        .color-chip.blue { background-color: #3498db; }
+        .color-chip.green { background-color: #2ecc71; }
+        .color-chip.yellow { background-color: #f1c40f; }
+        .color-chip.purple { background-color: #9b59b6; }
+        .color-chip.orange { background-color: #e67e22; }
+        .color-chip.pink { background-color: #e91e63; }
+        .color-chip.cyan { background-color: #1abc9c; }
+        .color-chip.lime { background-color: #8bc34a; }
+        .color-chip.indigo { background-color: #3f51b5; }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        .message {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .message.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .timer-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #f1c40f, #2ecc71);
+            border-radius: 4px;
+            transition: width 0.1s linear;
+        }
+
+            @media (max-width: 600px) {
+                .game-container {
+                    padding: 20px;
+                    margin: 10px;
+                }
+                
+                .hud {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 15px;
+                }
+                
+                .slot {
+                    width: 60px;
+                    height: 60px;
+                }
+                
+                .color-chip {
+                    width: 40px;
+                    height: 40px;
+                }
+            }        /* Animation Keyframes */
+        @keyframes selectedPulse {
+            0%, 100% {
+                box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(102, 126, 234, 0.8);
+            }
+        }
+
+        @keyframes solvedFadeIn {
+            0% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.15);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes shakeSlot {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        @keyframes roundStartGlow {
+            0% {
+                box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(102, 126, 234, 0.8);
+                border-color: #667eea;
+            }
+            100% {
+                box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+            }
+        }
+
+        @keyframes roundSolvedPulse {
+            0%, 100% {
+                box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+                border-color: #28a745;
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(40, 167, 69, 1);
+                border-color: #20c997;
+                transform: scale(1.15);
+            }
+        }
+
+        @keyframes chipClick {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.85); }
+            100% { transform: scale(1.1); }
+        }
+
+        @keyframes hudUpdate {
+            0% { transform: scale(1); }
+            50% { 
+                transform: scale(1.1);
+                color: #667eea;
+            }
+            100% { 
+                transform: scale(1);
+                color: #333;
+            }
+        }
+
+        @keyframes newRoundBounce {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes nextRoundPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes celebration {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎯 Guess Master</h1>
+        
+        <div class="hud">
+            <div class="hud-item">
+                <div class="hud-label">Round</div>
+                <div class="hud-value round-number" id="roundNumber">1</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Mode</div>
+                <div class="hud-value" id="currentMode">Classic</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Score</div>
+                <div class="hud-value score-display" id="score">0</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Gems</div>
+                <div class="hud-value gem-display" id="gems">0</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Slots</div>
+                <div class="hud-value" id="slotsCount">4</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Colors</div>
+                <div class="hud-value" id="colorsCount">6</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Guesses Left</div>
+                <div class="hud-value" id="guessesLeft">∞</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Timer</div>
+                <div class="hud-value" id="timer">--</div>
+                <div class="timer-bar" id="timerBar" style="display: none;">
+                    <div class="timer-fill" id="timerFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slots-container" id="slotsContainer">
+            <!-- Slots will be generated by JavaScript -->
+        </div>
+
+        <div class="color-palette" id="colorPalette">
+            <!-- Color chips will be generated dynamically by JavaScript -->
+        </div>
+
+        <div class="message info" id="messageArea">
+            Click a slot to select it, then click a color to make your guess!
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="newRoundBtn">🎮 New Game</button>
+            <button class="btn btn-secondary" id="toggleModeBtn">🔄 Toggle Mode</button>
+            <button class="btn next-round-btn" id="nextRoundBtn" style="display: none;">▶️ Next Round</button>
+        </div>
+    </div>
+
+    <script>
+        class GuessMaster {
+            constructor() {
+                this.modes = ['Classic', 'LimitedGuesses', 'TimeAttack'];
+                this.currentModeIndex = 0;
+                this.masterColors = [
+                    'red', 'blue', 'green', 'yellow', 'purple', 'orange', 
+                    'pink', 'cyan', 'lime', 'indigo', 'brown', 'teal', 
+                    'magenta', 'gold', 'silver', 'coral'
+                ];
+                
+                // Game state
+                this.roundNumber = 1;
+                this.score = 0;
+                this.gems = 0;
+                this.streak = 0;
+                this.failedRounds = 0;
+                this.adaptiveDifficulty = false;
+                
+                // Round state
+                this.itemPool = [];
+                this.decoyChips = [];
+                this.allChips = [];
+                this.numSlots = 4;
+                this.selectedSlot = null;
+                this.arrangement = [];
+                this.playerGuesses = [];
+                this.solvedSlots = [];
+                this.wrongGuesses = 0;
+                this.maxWrongGuesses = 6;
+                this.timeLeft = 45;
+                this.timerInterval = null;
+                this.gameActive = true;
+                this.autoAdvanceTimeout = null;
+
+                this.initializeElements();
+                this.bindEvents();
+                this.loadGameData();
+                this.startRound(this.roundNumber);
+            }
+
+            initializeElements() {
+                this.slotsContainer = document.getElementById('slotsContainer');
+                this.colorPalette = document.getElementById('colorPalette');
+                this.messageArea = document.getElementById('messageArea');
+                this.roundNumberElement = document.getElementById('roundNumber');
+                this.currentModeElement = document.getElementById('currentMode');
+                this.scoreElement = document.getElementById('score');
+                this.gemsElement = document.getElementById('gems');
+                this.slotsCountElement = document.getElementById('slotsCount');
+                this.colorsCountElement = document.getElementById('colorsCount');
+                this.guessesLeftElement = document.getElementById('guessesLeft');
+                this.timerElement = document.getElementById('timer');
+                this.timerBar = document.getElementById('timerBar');
+                this.timerFill = document.getElementById('timerFill');
+                this.newRoundBtn = document.getElementById('newRoundBtn');
+                this.toggleModeBtn = document.getElementById('toggleModeBtn');
+                this.nextRoundBtn = document.getElementById('nextRoundBtn');
+            }
+
+            createSlots() {
+                this.slotsContainer.innerHTML = '';
+                for (let i = 0; i < this.numSlots; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'slot';
+                    slot.dataset.slot = i;
+                    slot.innerHTML = `<div class="slot-number">${i + 1}</div>`;
+                    this.slotsContainer.appendChild(slot);
+                }
+            }
+
+            createColorPalette() {
+                this.colorPalette.innerHTML = '';
+                this.shuffleArray([...this.allChips]).forEach(color => {
+                    const chip = document.createElement('div');
+                    chip.className = `color-chip ${color}`;
+                    chip.dataset.color = color;
+                    chip.style.backgroundColor = this.getColorHex(color);
+                    this.colorPalette.appendChild(chip);
+                });
+            }
+
+            nextRound() {
+                this.clearAutoAdvance();
+                this.nextRoundBtn.style.display = 'none';
+                this.startRound(this.roundNumber + 1);
+            }
+
+            newGame() {
+                this.clearAutoAdvance();
+                this.roundNumber = 1;
+                this.score = 0;
+                this.gems = 0;
+                this.streak = 0;
+                this.failedRounds = 0;
+                this.adaptiveDifficulty = false;
+                this.nextRoundBtn.style.display = 'none';
+                this.startRound(1);
+            }
+
+            toggleMode() {
+                this.currentModeIndex = (this.currentModeIndex + 1) % this.modes.length;
+                this.newGame();
+            }
+
+            getCurrentMode() {
+                return this.modes[this.currentModeIndex];
+            }
+
+            // UI Update Methods
+            updateAllDisplays() {
+                this.updateRoundDisplay();
+                this.updateModeDisplay();
+                this.updateScoreDisplay();
+                this.updateGemsDisplay();
+                this.updateSlotsDisplay();
+                this.updateColorsDisplay();
+                this.updateGuessesDisplay();
+                this.updateTimer();
+            }
+
+            updateRoundDisplay() {
+                this.roundNumberElement.textContent = this.roundNumber;
+            }
+
+            updateModeDisplay() {
+                this.currentModeElement.textContent = this.getCurrentMode();
+            }
+
+            updateScoreDisplay() {
+                const element = this.scoreElement;
+                if (element.textContent !== this.score.toString()) {
+                    element.textContent = this.score;
+                    element.classList.add('updated');
+                    setTimeout(() => element.classList.remove('updated'), 500);
+                }
+            }
+
+            updateGemsDisplay() {
+                const element = this.gemsElement;
+                if (element.textContent !== this.gems.toString()) {
+                    element.textContent = this.gems;
+                    element.classList.add('updated');
+                    setTimeout(() => element.classList.remove('updated'), 500);
+                }
+            }
+
+            updateSlotsDisplay() {
+                this.slotsCountElement.textContent = this.numSlots;
+            }
+
+            updateColorsDisplay() {
+                this.colorsCountElement.textContent = this.itemPool.length;
+            }
+
+            animateNewRound() {
+                this.roundNumberElement.classList.add('new-round');
+                setTimeout(() => this.roundNumberElement.classList.remove('new-round'), 800);
+            }
+
+            bindEvents() {
+                // Slot selection
+                this.slotsContainer.addEventListener('click', (e) => {
+                    const slot = e.target.closest('.slot');
+                    if (slot && !slot.classList.contains('solved') && this.gameActive) {
+                        this.selectSlot(parseInt(slot.dataset.slot));
+                    }
+                });
+
+                // Color selection
+                this.colorPalette.addEventListener('click', (e) => {
+                    const chip = e.target.closest('.color-chip');
+                    if (chip && this.selectedSlot !== null && this.gameActive) {
+                        this.animateChipClick(chip);
+                        this.makeGuess(chip.dataset.color);
+                    }
+                });
+
+                // Control buttons
+                this.newRoundBtn.addEventListener('click', () => this.newGame());
+                this.toggleModeBtn.addEventListener('click', () => this.toggleMode());
+                this.nextRoundBtn.addEventListener('click', () => this.nextRound());
+            }
+
+            selectSlot(slotIndex) {
+                if (this.solvedSlots[slotIndex]) return;
+
+                // Remove previous selection
+                document.querySelectorAll('.slot').forEach(slot => {
+                    slot.classList.remove('selected');
+                });
+
+                // Select new slot
+                document.querySelector(`[data-slot="${slotIndex}"]`).classList.add('selected');
+                this.selectedSlot = slotIndex;
+                
+                this.showMessage(`Slot ${slotIndex + 1} selected. Choose a color!`, 'info');
+            }
+
+            makeGuess(color) {
+                if (this.selectedSlot === null || !this.gameActive) return;
+
+                const slotIndex = this.selectedSlot;
+                const correctColor = this.arrangement[slotIndex];
+
+                if (color === correctColor) {
+                    // Correct guess
+                    this.handleCorrectGuess(slotIndex, color);
+                } else {
+                    // Wrong guess
+                    this.handleWrongGuess(slotIndex, color, correctColor);
+                }
+
+                // Clear selection
+                document.querySelector(`[data-slot="${slotIndex}"]`).classList.remove('selected');
+                this.selectedSlot = null;
+
+                // Check win condition
+                if (this.solvedSlots.every(solved => solved)) {
+                    this.handleWin();
+                }
+            }
+
+            // Round Configuration System
+            getRoundConfig(roundNumber) {
+                const config = {
+                    slots: Math.max(3, Math.min(8, 3 + Math.floor(roundNumber / 2))),
+                    poolSize: Math.max(4, Math.min(8, Math.min(this.masterColors.length, 4 + Math.floor(roundNumber / 3)))),
+                    maxWrongGuesses: Math.max(4, 8 - Math.floor(roundNumber / 3)),
+                    timeAttackDuration: Math.max(25, Math.min(60, 60 - 2 * roundNumber)),
+                    timeBonus: Math.max(1, Math.min(3, 3 - Math.floor(roundNumber / 5)))
+                };
+                
+                // Adaptive difficulty adjustment
+                if (this.adaptiveDifficulty) {
+                    config.slots = Math.max(3, config.slots - 1);
+                    config.timeAttackDuration += 10;
+                }
+                
+                return config;
+            }
+
+            buildItemPool(roundNumber) {
+                const config = this.getRoundConfig(roundNumber);
+                const shuffled = this.shuffleArray([...this.masterColors]);
+                return shuffled.slice(0, config.poolSize);
+            }
+
+            buildArrangement(config) {
+                const arrangement = [];
+                for (let i = 0; i < config.slots; i++) {
+                    arrangement.push(this.itemPool[Math.floor(Math.random() * this.itemPool.length)]);
+                }
+                return arrangement;
+            }
+
+            buildDecoyChips() {
+                const usedColors = new Set(this.arrangement);
+                const availableDecoys = this.masterColors.filter(color => 
+                    !this.itemPool.includes(color)
+                );
+                
+                const numDecoys = Math.min(3, Math.max(1, availableDecoys.length));
+                const shuffledDecoys = this.shuffleArray(availableDecoys);
+                
+                return shuffledDecoys.slice(0, numDecoys);
+            }
+
+            startRound(roundNumber) {
+                this.clearAutoAdvance();
+                this.roundNumber = roundNumber;
+                const config = this.getRoundConfig(roundNumber);
+                
+                // Build round components
+                this.itemPool = this.buildItemPool(roundNumber);
+                this.numSlots = config.slots;
+                this.arrangement = this.buildArrangement(config);
+                this.decoyChips = this.buildDecoyChips();
+                this.allChips = [...this.itemPool, ...this.decoyChips];
+                
+                // Reset game state
+                this.gameActive = true;
+                this.wrongGuesses = 0;
+                this.selectedSlot = null;
+                this.playerGuesses = new Array(this.numSlots).fill(null);
+                this.solvedSlots = new Array(this.numSlots).fill(false);
+                
+                // Set mode-specific parameters
+                const mode = this.getCurrentMode();
+                this.maxWrongGuesses = config.maxWrongGuesses;
+                this.timeLeft = config.timeAttackDuration;
+                this.timeBonus = config.timeBonus;
+                
+                // Create UI
+                this.createSlots();
+                this.createColorPalette();
+                this.updateAllDisplays();
+                this.animateNewRound();
+                
+                // Start timer for Time Attack mode
+                if (mode === 'TimeAttack') {
+                    this.startTimer();
+                }
+                
+                // Round start animation
+                this.playRoundStartAnimation();
+                
+                this.showMessage(`Round ${roundNumber} started! ${this.numSlots} slots, ${this.itemPool.length} colors available.`, 'info');
+            }
+
+            handleCorrectGuess(slotIndex, color) {
+                const slot = document.querySelector(`[data-slot="${slotIndex}"]`);
+                slot.style.backgroundColor = this.getColorHex(color);
+                slot.classList.add('solved');
+                this.solvedSlots[slotIndex] = true;
+                this.playerGuesses[slotIndex] = color;
+
+                // Calculate score
+                const basePoints = 10;
+                const streakBonus = 5 * this.streak;
+                const points = basePoints + streakBonus;
+                this.score += points;
+                this.streak++;
+
+                this.showMessage(`🎉 Correct! Slot ${slotIndex + 1} is ${color}! +${points} points`, 'success');
+
+                // Time Attack bonus
+                if (this.getCurrentMode() === 'TimeAttack') {
+                    this.timeLeft = Math.min(this.getRoundConfig(this.roundNumber).timeAttackDuration, this.timeLeft + this.timeBonus);
+                    this.updateTimer();
+                }
+                
+                this.updateScoreDisplay();
+            }
+
+            handleWrongGuess(slotIndex, guessedColor, correctColor) {
+                this.wrongGuesses++;
+                this.streak = 0; // Reset streak on wrong guess
+                
+                // Animate wrong guess
+                const slot = document.querySelector(`[data-slot="${slotIndex}"]`);
+                slot.classList.add('shake');
+                setTimeout(() => slot.classList.remove('shake'), 500);
+                
+                let message = `❌ Wrong! Slot ${slotIndex + 1} is not ${guessedColor}.`;
+                
+                if (this.getCurrentMode() === 'LimitedGuesses') {
+                    const remaining = this.maxWrongGuesses - this.wrongGuesses;
+                    message += ` ${remaining} guesses left.`;
+                    this.updateGuessesDisplay();
+                    
+                    if (this.wrongGuesses >= this.maxWrongGuesses) {
+                        this.handleLoss('Out of guesses!');
+                        return;
+                    }
+                }
+                
+                this.showMessage(message, 'error');
+            }
+
+            handleWin() {
+                this.gameActive = false;
+                this.clearTimer();
+                this.failedRounds = 0; // Reset failed rounds counter
+                this.adaptiveDifficulty = false; // Reset adaptive difficulty
+                
+                // Calculate round completion bonus
+                const roundBonus = 10 * this.roundNumber;
+                this.score += roundBonus;
+                
+                // Award gems every 3 rounds
+                if (this.roundNumber % 3 === 0) {
+                    this.gems++;
+                    this.updateGemsDisplay();
+                }
+                
+                // Animate all solved slots
+                document.querySelectorAll('.slot.solved').forEach((slot, index) => {
+                    setTimeout(() => {
+                        slot.classList.add('round-solved');
+                    }, index * 100);
+                });
+                
+                // Save progress
+                this.saveGameData();
+                
+                this.showMessage(`🏆 Round ${this.roundNumber} completed! +${roundBonus} bonus points!`, 'success');
+                this.updateScoreDisplay();
+                
+                // Show next round button and auto-advance
+                this.nextRoundBtn.style.display = 'inline-block';
+                this.autoAdvanceTimeout = setTimeout(() => {
+                    this.nextRound();
+                }, 2000);
+            }
+
+            handleLoss(reason) {
+                this.gameActive = false;
+                this.clearTimer();
+                this.clearAutoAdvance();
+                this.failedRounds++;
+                this.streak = 0;
+                
+                // Enable adaptive difficulty if failed 2 rounds in a row
+                if (this.failedRounds >= 2) {
+                    this.adaptiveDifficulty = true;
+                }
+                
+                // Reveal solution
+                this.arrangement.forEach((color, index) => {
+                    if (!this.solvedSlots[index]) {
+                        const slot = document.querySelector(`[data-slot="${index}"]`);
+                        slot.style.backgroundColor = this.getColorHex(color);
+                        slot.style.opacity = '0.7';
+                    }
+                });
+                
+                this.showMessage(`💔 Game Over! ${reason} The solution was: ${this.arrangement.join(', ')}`, 'error');
+                this.saveGameData();
+            }
+
+            showMessage(text, type = 'info') {
+                this.messageArea.textContent = text;
+                this.messageArea.className = `message ${type}`;
+            }
+        }
+
+            toggleMode() {
+                this.currentModeIndex = (this.currentModeIndex + 1) % this.modes.length;
+                this.newRound();
+            }
+
+            getCurrentMode() {
+                return this.modes[this.currentModeIndex];
+            }
+
+            updateModeDisplay() {
+                this.currentModeElement.textContent = this.getCurrentMode();
+            }
+
+            updateGuessesDisplay() {
+                const mode = this.getCurrentMode();
+                const element = this.guessesLeftElement;
+                
+                if (mode === 'LimitedGuesses') {
+                    const newValue = Math.max(0, this.maxWrongGuesses - this.wrongGuesses);
+                    if (element.textContent !== newValue.toString()) {
+                        element.textContent = newValue;
+                        element.classList.add('updated');
+                        setTimeout(() => element.classList.remove('updated'), 500);
+                    }
+                } else {
+                    if (element.textContent !== '∞') {
+                        element.textContent = '∞';
+                        element.classList.add('updated');
+                        setTimeout(() => element.classList.remove('updated'), 500);
+                    }
+                }
+            }
+
+            updateTimer() {
+                const mode = this.getCurrentMode();
+                if (mode === 'TimeAttack') {
+                    const newValue = `${this.timeLeft}s`;
+                    if (this.timerElement.textContent !== newValue) {
+                        this.timerElement.textContent = newValue;
+                        this.timerElement.classList.add('updated');
+                        setTimeout(() => this.timerElement.classList.remove('updated'), 300);
+                    }
+                    this.timerBar.style.display = 'block';
+                    
+                    // Update timer bar
+                    const maxTime = this.getRoundConfig(this.roundNumber).timeAttackDuration;
+                    const percentage = (this.timeLeft / maxTime) * 100;
+                    this.timerFill.style.width = `${percentage}%`;
+                } else {
+                    this.timerElement.textContent = '--';
+                    this.timerBar.style.display = 'none';
+                }
+            }
+
+            clearAutoAdvance() {
+                if (this.autoAdvanceTimeout) {
+                    clearTimeout(this.autoAdvanceTimeout);
+                    this.autoAdvanceTimeout = null;
+                }
+            }
+
+            // Persistence Methods
+            saveGameData() {
+                const gameData = {
+                    highestRound: Math.max(this.roundNumber, this.getStoredValue('highestRound', 1)),
+                    bestScore: Math.max(this.score, this.getStoredValue('bestScore', 0)),
+                    totalGems: this.gems + this.getStoredValue('totalGems', 0)
+                };
+                
+                Object.keys(gameData).forEach(key => {
+                    localStorage.setItem(`guessMaster_${key}`, gameData[key]);
+                });
+            }
+
+            loadGameData() {
+                // Load any persistent data if needed
+                const highestRound = this.getStoredValue('highestRound', 1);
+                const bestScore = this.getStoredValue('bestScore', 0);
+                
+                if (highestRound > 1 || bestScore > 0) {
+                    console.log(`Previous best: Round ${highestRound}, Score ${bestScore}`);
+                }
+            }
+
+            getStoredValue(key, defaultValue) {
+                const stored = localStorage.getItem(`guessMaster_${key}`);
+                return stored ? parseInt(stored) : defaultValue;
+            }
+
+            updateGuessesDisplay() {
+                const mode = this.getCurrentMode();
+                const element = this.guessesLeftElement;
+                
+                if (mode === 'LimitedGuesses') {
+                    const newValue = Math.max(0, this.maxWrongGuesses - this.wrongGuesses);
+                    if (element.textContent !== newValue.toString()) {
+                        element.textContent = newValue;
+                        element.classList.add('updated');
+                        setTimeout(() => element.classList.remove('updated'), 500);
+                    }
+                } else {
+                    if (element.textContent !== '∞') {
+                        element.textContent = '∞';
+                        element.classList.add('updated');
+                        setTimeout(() => element.classList.remove('updated'), 500);
+                    }
+                }
+            }
+
+            startTimer() {
+                this.clearTimer();
+                this.timerInterval = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateTimer();
+                    
+                    if (this.timeLeft <= 0) {
+                        this.handleLoss('Time\'s up!');
+                    }
+                }, 1000);
+            }
+
+            clearTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+
+            getColorHex(colorName) {
+                const colorMap = {
+                    red: '#e74c3c',
+                    blue: '#3498db',
+                    green: '#2ecc71',
+                    yellow: '#f1c40f',
+                    purple: '#9b59b6',
+                    orange: '#e67e22',
+                    pink: '#e91e63',
+                    cyan: '#1abc9c',
+                    lime: '#8bc34a',
+                    indigo: '#3f51b5',
+                    brown: '#8d6e63',
+                    teal: '#009688',
+                    magenta: '#e91e63',
+                    gold: '#ffd700',
+                    silver: '#c0c0c0',
+                    coral: '#ff7f50'
+                };
+                return colorMap[colorName] || '#f9f9f9';
+            }
+
+            shuffleArray(array) {
+                const shuffled = [...array];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                return shuffled;
+            }
+
+            animateChipClick(chip) {
+                chip.classList.add('clicked');
+                setTimeout(() => chip.classList.remove('clicked'), 200);
+            }
+
+            playRoundStartAnimation() {
+                const slots = document.querySelectorAll('.slot');
+                slots.forEach((slot, index) => {
+                    setTimeout(() => {
+                        slot.classList.add('round-start');
+                        setTimeout(() => slot.classList.remove('round-start'), 1000);
+                    }, index * 100);
+                });
+            }
+
+            showMessage(text, type = 'info') {
+                this.messageArea.textContent = text;
+                this.messageArea.className = `message ${type}`;
+            }
+        }
+
+        // Initialize the game when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new GuessMaster();
+        });
+    </script>
+</body>
+</html>
