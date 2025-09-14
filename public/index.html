@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#667eea">
+    <title>Guess Master - Progressive Color Puzzle Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>Guess Master</h1>
+        
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <button id="local-mode" class="mode-btn active">Local Play</button>
+            <button id="online-mode" class="mode-btn">Online Multiplayer</button>
+        </div>
+        
+        <!-- Connection Status (for online mode) -->
+        <div id="connection-status" class="connection-status hidden">
+            <span class="status-indicator"></span>
+            <span class="status-text">Disconnected</span>
+        </div>
+        
+        <!-- Header Controls -->
+        <div class="header-controls">
+            <div class="stats-section">
+                <div class="stat-item">
+                    <span class="stat-label">Round:</span>
+                    <span class="stat-value" id="round-number">1</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Score:</span>
+                    <span class="stat-value" id="score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">💎:</span>
+                    <span class="stat-value" id="gems">0</span>
+                </div>
+            </div>
+            
+            <div class="theme-selector">
+                <select class="theme-dropdown" id="theme-selector">
+                    <option value="colors">🎨 Colors</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progress-completed">0</span> / <span id="progress-total">4</span> slots
+            </div>
+        </div>
+
+        <!-- Timer (Time Attack mode) -->
+        <div class="timer-bar" id="timer-bar">
+            <div class="timer-fill" id="timer-fill"></div>
+            <div class="timer-text" id="timer">45s</div>
+        </div>
+
+        <!-- Game Mode Selector -->
+        <div class="mode-selector">
+            <label>
+                <input type="radio" name="mode" value="Classic" checked>
+                <span class="mode-label">Classic</span>
+            </label>
+            <label>
+                <input type="radio" name="mode" value="Limited">
+                <span class="mode-label">Limited Guesses</span>
+            </label>
+            <label>
+                <input type="radio" name="mode" value="TimeAttack">
+                <span class="mode-label">Time Attack</span>
+            </label>
+        </div>
+
+        <!-- Game Board -->
+        <div class="game-board" id="game-board">
+            <!-- Slots will be generated dynamically -->
+        </div>
+
+        <!-- Color Palette -->
+        <div class="color-palette" id="color-palette">
+            <!-- Colors will be generated dynamically -->
+        </div>
+
+        <!-- Difficulty Slider -->
+        <div class="difficulty-controls">
+            <label for="slot-count">Slots: <span id="slot-count-display">4</span></label>
+            <input type="range" id="slot-count" min="3" max="8" value="4" class="slider">
+        </div>
+
+        <!-- Game Controls -->
+        <div class="game-controls">
+            <button class="game-btn" id="start-game">Start Game</button>
+            <button class="game-btn secondary" id="reset-game">Reset</button>
+            <button class="game-btn secondary" id="next-round" style="display: none;">Next Round</button>
+        </div>
+
+        <!-- Messages -->
+        <div class="message" id="message"></div>
+
+        <!-- Theme Unlock Modal -->
+        <div class="theme-modal" id="theme-modal">
+            <div class="theme-modal-content">
+                <h3>New Theme Unlocked!</h3>
+                <div class="unlocked-theme" id="unlocked-theme">
+                    <div class="theme-icon">🎨</div>
+                    <div class="theme-name">Colors</div>
+                    <div class="theme-rarity common">Common</div>
+                </div>
+                <button class="modal-btn" id="close-modal">Awesome!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+    <script src="socketClient.js"></script>
+    
+    <script>
+        // Initialize the game when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new GuessMaster();
+        });
+    </script>
+</body>
+</html>
