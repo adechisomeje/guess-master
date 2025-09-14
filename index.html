@@ -778,6 +778,27 @@
             }
         }
 
+        @keyframes chipRemove {
+            0% { 
+                opacity: 1; 
+                transform: scale(1); 
+            }
+            50% { 
+                opacity: 0.5; 
+                transform: scale(0.8); 
+            }
+            100% { 
+                opacity: 0; 
+                transform: scale(0.3); 
+                display: none;
+            }
+        }
+
+        .color-chip.removing {
+            animation: chipRemove 0.4s ease-out forwards;
+            pointer-events: none;
+        }
+
         /* Animation Keyframes */
         @keyframes selectedPulse {
             0%, 100% {
@@ -1421,6 +1442,8 @@
                 this.itemPool = [];
                 this.decoyChips = [];
                 this.allChips = [];
+                this.availableChips = []; // Chips currently available for selection
+                this.itemUsageCount = new Map(); // Track how many times each item appears in solution
                 this.numSlots = 4;
                 this.selectedSlot = null;
                 this.arrangement = [];
@@ -1579,7 +1602,7 @@
                         this.animateChipClick(chip);
                         // Find the item by ID from chip dataset
                         const itemId = chip.dataset.color;
-                        const item = this.allChips.find(item => item.id === itemId);
+                        const item = this.availableChips.find(item => item.id === itemId);
                         if (item) {
                             this.makeGuess(item);
                         }
@@ -1669,6 +1692,9 @@
                 this.decoyChips = this.buildDecoyChips();
                 this.allChips = [...this.itemPool, ...this.decoyChips];
                 
+                // Initialize item usage tracking for chip removal system
+                this.initializeItemUsage();
+                
                 // Reset game state
                 this.gameActive = true;
                 this.wrongGuesses = 0;
@@ -1712,10 +1738,82 @@
 
             createColorPalette() {
                 this.colorPalette.innerHTML = '';
-                this.shuffleArray([...this.allChips]).forEach(item => {
+                this.shuffleArray([...this.availableChips]).forEach(item => {
                     const chip = this.renderChip(item);
+                    
+                    // Add count indicator if item appears multiple times
+                    const count = this.itemUsageCount.get(item.id) || 0;
+                    if (count > 1) {
+                        const countBadge = document.createElement('div');
+                        countBadge.className = 'chip-count-badge';
+                        countBadge.textContent = count;
+                        countBadge.style.cssText = `
+                            position: absolute;
+                            top: -5px;
+                            right: -5px;
+                            background: #ff4757;
+                            color: white;
+                            border-radius: 50%;
+                            width: 18px;
+                            height: 18px;
+                            font-size: 0.7em;
+                            font-weight: bold;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border: 2px solid white;
+                            z-index: 10;
+                        `;
+                        chip.style.position = 'relative';
+                        chip.appendChild(countBadge);
+                    }
+                    
                     this.colorPalette.appendChild(chip);
                 });
+            }
+
+            initializeItemUsage() {
+                // Count how many times each item appears in the arrangement
+                this.itemUsageCount.clear();
+                this.arrangement.forEach(item => {
+                    const currentCount = this.itemUsageCount.get(item.id) || 0;
+                    this.itemUsageCount.set(item.id, currentCount + 1);
+                });
+                
+                // Initialize available chips with all chips
+                this.availableChips = [...this.allChips];
+            }
+
+            removeItemIfNoLongerNeeded(itemId) {
+                // Decrease usage count for this item
+                const currentCount = this.itemUsageCount.get(itemId) || 0;
+                const newCount = currentCount - 1;
+                
+                if (newCount <= 0) {
+                    // Remove item from available chips if no longer needed
+                    this.availableChips = this.availableChips.filter(chip => chip.id !== itemId);
+                    this.itemUsageCount.delete(itemId);
+                    
+                    // Animate the chip removal
+                    const chipToRemove = document.querySelector(`[data-color="${itemId}"]`);
+                    if (chipToRemove) {
+                        chipToRemove.classList.add('removing');
+                        
+                        // After animation completes, recreate the palette
+                        setTimeout(() => {
+                            this.createColorPalette();
+                        }, 400);
+                    } else {
+                        // Fallback if chip not found
+                        this.createColorPalette();
+                    }
+                    
+                    return true; // Item was removed
+                } else {
+                    // Update the count
+                    this.itemUsageCount.set(itemId, newCount);
+                    return false; // Item still needed
+                }
             }
 
             renderChip(item, isSlot = false) {
@@ -1818,6 +1916,9 @@
                 this.solvedSlots[slotIndex] = true;
                 this.playerGuesses[slotIndex] = item.id;
 
+                // Remove item from available chips if no longer needed
+                const itemWasRemoved = this.removeItemIfNoLongerNeeded(item.id);
+
                 // Calculate score
                 const basePoints = 10;
                 const streakBonus = 5 * this.streak;
@@ -1825,7 +1926,14 @@
                 this.score += points;
                 this.streak++;
 
-                this.showMessage(`🎉 Correct! Slot ${slotIndex + 1} is ${item.label}! +${points} points`, 'success');
+                let message = `🎉 Correct! Slot ${slotIndex + 1} is ${item.label}! +${points} points`;
+                if (itemWasRemoved) {
+                    message += ` • ${item.label} removed from palette`;
+                } else if (this.itemUsageCount.get(item.id) > 0) {
+                    const remainingCount = this.itemUsageCount.get(item.id);
+                    message += ` • ${remainingCount} more ${item.label}${remainingCount > 1 ? 's' : ''} needed`;
+                }
+                this.showMessage(message, 'success');
 
                 // Time Attack bonus
                 if (this.getCurrentMode() === 'TimeAttack') {
